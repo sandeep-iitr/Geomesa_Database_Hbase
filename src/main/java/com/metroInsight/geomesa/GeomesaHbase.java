@@ -3,7 +3,6 @@ package com.metroInsight.geomesa;
 import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Joiner;
 import com.vividsolutions.jts.geom.Geometry;
-import org.apache.commons.cli.*;
 import org.geotools.data.*;
 import org.geotools.factory.Hints;
 import org.geotools.feature.DefaultFeatureCollection;
@@ -33,54 +32,19 @@ import java.util.Random;
 
 
 public class GeomesaHbase {
-
-	static String TABLE_NAME = "bigtable.table.name".replace(".", "_");
-
-    // sub-set of parameters that are used to create the HBase DataStore
-    static String[] HBASE_CONNECTION_PARAMS = new String[]{
-            TABLE_NAME
-    };
     
-    
-    /**
-     * Creates a common set of command-line options for the parser.  Each option
-     * is described separately.
-     */
-    static Options getCommonRequiredOptions() {
-        Options options = new Options();
-
-        @SuppressWarnings("static-access")
-		Option tableNameOpt = OptionBuilder.withArgName(TABLE_NAME)
-                .hasArg()
-                .isRequired()
-                .withDescription("table name")
-                .create(TABLE_NAME);
-        options.addOption(tableNameOpt);
-
-        return options;
-    }
-
-    static Map<String, Serializable> getHBaseDataStoreConf(CommandLine cmd) {
-        Map<String , Serializable> dsConf = new HashMap<>();
-        for (String param : HBASE_CONNECTION_PARAMS) {
-            dsConf.put(param.replace("_", "."), cmd.getOptionValue(param));
-        }
-        return dsConf;
-    }
-    
+	DataStore dataStore;
 
     static SimpleFeatureType createSimpleFeatureType(String simpleFeatureTypeName)
             throws SchemaException {
 
         // list the attributes that constitute the feature type
         List<String> attributes = Lists.newArrayList(
-                "name:String",
+                "data_id:String",
                 "value:java.lang.Long",     
                 "date:Date",               
-                "*Where:Point:srid=4326",  
-                "data_type:String",
-                "unit:String"
-        );
+                "*Where:Point:srid=4326" 
+                );
         
         // create the bare simple-feature type
         String simpleFeatureTypeSchema = Joiner.on(",").join(attributes);
@@ -112,25 +76,26 @@ public class GeomesaHbase {
               JSONParser parser = new JSONParser();
 			  JSONObject obj2=(JSONObject)parser.parse(data);
 			 
-			  String name=(String) obj2.get("name");
-			  String unit =(String)obj2.get("unit");
+			  String name=(String) obj2.get("data_id");
 			  
 			  JSONObject loc=(JSONObject)obj2.get("location");
+			  
 			  double lat =(Double)loc.get("lat");
+			  
 			  double lng =(Double)loc.get("lng");
 			  
 			  Long timestamp =(Long)obj2.get("timeStamp");
 			  
 			  String value = (String) obj2.get("value");
 			  
-			  String data_type = (String)obj2.get("data_type");
+			 
 			  
 			    DateTime dateTime=new DateTime(timestamp);
 	            //simpleFeature.getUserData().put(Hints.USE_PROVIDED_FID, java.lang.Boolean.TRUE);
-	            simpleFeature.setAttribute("name",name);
-	            simpleFeature.setAttribute("unit",unit);
+	            simpleFeature.setAttribute("data_id",name);
+	           
 	            simpleFeature.setAttribute("value",value);
-	            simpleFeature.setAttribute("data_type", data_type);
+	            
 	            Geometry geometry = WKTUtils$.MODULE$.read("POINT(" + lat + " " + lng + ")");
 	            simpleFeature.setAttribute("Where", geometry);
 	            simpleFeature.setAttribute("date", dateTime.toDate());
@@ -145,15 +110,7 @@ public class GeomesaHbase {
            
             	e.printStackTrace();
             }
-			 //System.out.print("Record Num: "+obj2.get("RecordNum"));
-			// System.out.print(" DataType: "+obj2.get("DataType"));
-			 //System.out.print(" DataValue: "+obj2.get("DataValueInt"));
-			// System.out.println();
-			 
-            
-           
-       
-
+			
         return featureCollection;
     }
     
@@ -206,22 +163,21 @@ public class GeomesaHbase {
 	int n = 0;
 	while (featureItr.hasNext()) {
 	Feature feature = featureItr.next();
+	
+	/*
 	System.out.println((++n) + ".  " +
-	  feature.getProperty("name").getValue() + "|" +
-	  feature.getProperty("data_type").getValue() + "|" +
+	  feature.getProperty("id").getValue() + "|" +
+	 
 	  feature.getProperty("value").getValue() + "|" +
 	  feature.getProperty("date").getValue() + "|" +
-	  feature.getProperty("Where").getValue() + "|" +
-	  feature.getProperty("unit").getValue());
+	  feature.getProperty("Where").getValue());
+	*/
 	
 	    JSONObject Data = new JSONObject();
-	    Data.put("name", feature.getProperty("name").getValue());
-	    Data.put("data_type", feature.getProperty("data_type").getValue());
-	    Data.put("unit", feature.getProperty("value").getValue());
+	    Data.put("data_id", feature.getProperty("data_id").getValue());
 	    Data.put("value", "25");
 	    Data.put("date", feature.getProperty("date").getValue());
 	    Data.put("where", feature.getProperty("Where").getValue());
-	   // Data.put("unit", feature.getProperty("unit").getValue());
 	    
 	    ja.add(Data);
 	    
@@ -233,24 +189,18 @@ public class GeomesaHbase {
 
 
     
-    
-    
-    
-    public  void geomesa_insertData(String data) {
-        // find out where -- in HBase -- the user wants to store data
-     
-        
-    try{
-        
-    	Map<String, Serializable> parameters = new HashMap<>();
-    	parameters.put("bigtable.table.name", "Geomesa");
-    	
-       
-        // verify that we can see this HBase destination in a GeoTools manner
-      
-        DataStore dataStore = DataStoreFinder.getDataStore(parameters);
-		
-        assert dataStore != null;
+    public void geomesa_initialize()
+    {
+    	try{
+    		if(dataStore==null)
+        	{
+        	Map<String, Serializable> parameters = new HashMap<>();
+        	parameters.put("bigtable.table.name", "Geomesa");
+        	dataStore = DataStoreFinder.getDataStore(parameters);
+        	}
+        	
+            assert dataStore != null;
+            
 			
         // establish specifics concerning the SimpleFeatureType to store
         String simpleFeatureTypeName = "MetroInsight";
@@ -262,7 +212,35 @@ public class GeomesaHbase {
         // of this type to the table
         System.out.println("Creating feature-type (schema):  " + simpleFeatureTypeName);
         dataStore.createSchema(simpleFeatureType);
-
+        }
+    	catch(Exception e)
+    	{
+    		e.printStackTrace();
+    	}
+        
+    }
+    
+    
+    
+    public  void geomesa_insertData(String data) {
+        // find out where -- in HBase -- the user wants to store data
+     
+        
+    try{
+        
+    	if(dataStore==null)
+    	{
+    	Map<String, Serializable> parameters = new HashMap<>();
+    	parameters.put("bigtable.table.name", "Geomesa");
+    	dataStore = DataStoreFinder.getDataStore(parameters);
+    	}
+    	
+        assert dataStore != null;
+			
+        // establish specifics concerning the SimpleFeatureType to store
+        String simpleFeatureTypeName = "MetroInsight";
+        SimpleFeatureType simpleFeatureType = createSimpleFeatureType(simpleFeatureTypeName);
+        
         // create new features locally, and add them to this table
         System.out.println("Creating new features");
         FeatureCollection featureCollection = createNewFeatures(simpleFeatureType, data);
@@ -291,21 +269,17 @@ public class GeomesaHbase {
     {
     	try{
     	 
+    		if(dataStore==null)
+        	{
+        	Map<String, Serializable> parameters = new HashMap<>();
+        	parameters.put("bigtable.table.name", "Geomesa");
+        	dataStore = DataStoreFinder.getDataStore(parameters);
+        	}
+        	
+            assert dataStore != null;
   			
     	String simpleFeatureTypeName = "MetroInsight";
-    	// verify that we can see this HBase destination in a GeoTools manner
-    	 
-    	Map<String, Serializable> parameters = new HashMap<>();
-    	parameters.put("bigtable.table.name", "Geomesa");
     	
-       
-        // verify that we can see this HBase destination in a GeoTools manner
-      
-        DataStore dataStore = DataStoreFinder.getDataStore(parameters);
-        
-		assert dataStore != null;
-			
-			// water data|temperature|25|Thu Sep 01 06:28:00 PDT 2016|POINT (-77.5577293170671 38.384020026677035)|degree celcius
     	// query a few Features from this table
         System.out.println("Submitting query");
         JSONArray result=queryFeatures(simpleFeatureTypeName, dataStore,

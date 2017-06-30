@@ -19,20 +19,30 @@ public class Geomesa_simple_test {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		
-		//inserting a simple data point
+		
+		//initializing the schema
+		
+		try
+		{	
+		GeomesaHbase gmh=new GeomesaHbase();
+		gmh.geomesa_initialize();
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
+		
+		//inserting  data points
 		try{
 			
 		 JSONObject Data = new JSONObject();
-		 
-		 String name="data_name1";
+		 String data_id="data_name1";
 		 String data_type="double";
 		 String unit = "CM";
 		 String value = "25";
 		 int unixTimestamp=0;
 		 
-		    Data.put("name", name);
-		    Data.put("data_type",data_type );
-		    Data.put("unit",unit );
+		    Data.put("data_id", data_id);
 		    Data.put("value", value);
 		    Data.put("timeStamp", unixTimestamp);
 		    
@@ -45,7 +55,10 @@ public class Geomesa_simple_test {
 		    System.out.println("Data Point to Insert is:"+Data.toString());
 		    
 		GeomesaHbase gmh=new GeomesaHbase();
-        gmh.geomesa_insertData(Data.toString());
+		
+		//inserting 100 readings
+		  for(int i=0;i<100;i++)
+           gmh.geomesa_insertData(Data.toString());
 
 		}//end try
 		
@@ -55,13 +68,17 @@ public class Geomesa_simple_test {
 		}
 		
 		//querying the data points
-		
 		try
 		{
 		GeomesaHbase gmh=new GeomesaHbase();
-		JSONArray result= gmh.Query();
 		
-		System.out.println("Data returned is:"+result.toString());
+		//quering 100 times
+			for(int i=0;i<100;i++)
+			{
+			JSONArray result= gmh.Query();
+			System.out.println(i+"Side of Result :"+result.size());
+			System.out.println(i+"Result is:"+result.toJSONString());
+			}
 		
 		}
 		catch(Exception e)
