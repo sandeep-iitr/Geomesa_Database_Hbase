@@ -221,7 +221,7 @@ public class GeomesaHbase {
 	    Data.put("value", "25");
 	    Data.put("date", feature.getProperty("date").getValue());
 	    Data.put("where", feature.getProperty("Where").getValue());
-	    Data.put("unit", feature.getProperty("unit").getValue());
+	   // Data.put("unit", feature.getProperty("unit").getValue());
 	    
 	    ja.add(Data);
 	    
@@ -320,7 +320,7 @@ public class GeomesaHbase {
     	// query a few Features from this table
         System.out.println("Submitting query");
         JSONArray result=queryFeatures(simpleFeatureTypeName, dataStore,
-                "Where", -76.5, 37.5, -78.0, 39.0);
+                "Where", 10, 10, 30, 30);
         
         return result;
     	}
