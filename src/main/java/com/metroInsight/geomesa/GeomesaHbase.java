@@ -238,27 +238,20 @@ public class GeomesaHbase {
     
     public  void geomesa_insertData(String data) {
         // find out where -- in HBase -- the user wants to store data
-        CommandLineParser parser = new BasicParser();
-        Options options = getCommonRequiredOptions();
+     
         
     try{
-        String[] args =new String[2];
-        args[0]="--bigtable_table_name";
-        args[1]="Geomesa";
         
-        CommandLine cmd=null;
-		
-			cmd = parser.parse( options, args);
-		
+    	Map<String, Serializable> parameters = new HashMap<>();
+    	parameters.put("bigtable.table.name", "Geomesa");
+    	
        
         // verify that we can see this HBase destination in a GeoTools manner
-        Map<String, Serializable> dsConf = getHBaseDataStoreConf(cmd);
-        DataStore dataStore;
+      
+        DataStore dataStore = DataStoreFinder.getDataStore(parameters);
 		
-			dataStore = DataStoreFinder.getDataStore(dsConf);
-			assert dataStore != null;
+        assert dataStore != null;
 			
-
         // establish specifics concerning the SimpleFeatureType to store
         String simpleFeatureTypeName = "MetroInsight";
         SimpleFeatureType simpleFeatureType = createSimpleFeatureType(simpleFeatureTypeName);
@@ -297,24 +290,20 @@ public class GeomesaHbase {
     public JSONArray Query()
     {
     	try{
-    	  CommandLineParser parser = new BasicParser();
-          Options options = getCommonRequiredOptions();
-          
-    	  String[] args =new String[2];
-          args[0]="--bigtable_table_name";
-          args[1]="Geomesa";
-          
-          CommandLine cmd=null;
-  		
-  			cmd = parser.parse( options, args);
+    	 
   			
     	String simpleFeatureTypeName = "MetroInsight";
     	// verify that we can see this HBase destination in a GeoTools manner
-        Map<String, Serializable> dsConf = getHBaseDataStoreConf(cmd);
-        DataStore dataStore;
-		
-			dataStore = DataStoreFinder.getDataStore(dsConf);
-			assert dataStore != null;
+    	 
+    	Map<String, Serializable> parameters = new HashMap<>();
+    	parameters.put("bigtable.table.name", "Geomesa");
+    	
+       
+        // verify that we can see this HBase destination in a GeoTools manner
+      
+        DataStore dataStore = DataStoreFinder.getDataStore(parameters);
+        
+		assert dataStore != null;
 			
 			// water data|temperature|25|Thu Sep 01 06:28:00 PDT 2016|POINT (-77.5577293170671 38.384020026677035)|degree celcius
     	// query a few Features from this table
