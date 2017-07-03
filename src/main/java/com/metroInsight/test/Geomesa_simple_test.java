@@ -19,7 +19,7 @@ import com.metroInsight.geomesa.GeomesaHbase;
 public class Geomesa_simple_test {
 
 	static GeomesaHbase gmh;
-	static int count=30000;//number of data points to insert
+	static int count=300;//number of data points to insert
 	
 	public static void main(String[] args) {	
 
@@ -29,18 +29,27 @@ public class Geomesa_simple_test {
 			 initialize();
 			
 			// inserting data points
-			 insert_data(count);
+			// insert_data(count);
 			
 			// querying the data points
-			double lat_min=-30.0;
-			double lat_max=-45.1;
-			double lng_min=60.0;
-			double lng_max=70.1;
+			double lat_min=33.0;
+			double lat_max=33.1;
+			double lng_min=62.0;
+			double lng_max=62.1;
 			
 			JSONArray result = gmh.Query_Box_Lat_Lng(lat_min, lat_max, lng_min, lng_max);
-			System.out.println(": Side of Result :" + result.size());
-			if(result.size()<200)
-			System.out.println(": Result is:" + result.toJSONString());
+			System.out.println(": Side of Result _Box_Lat_Lng :" + result.size());
+			if(result.size()<400)
+			System.out.println(": Result of _Box_Lat_Lng is:" + result.toJSONString());
+			
+			long date_min = 1499110975914L;//1499110975914 System.currentTimeMillis()-1000000;//past 100 seconds
+			long date_max = 1499110976514L;//1499110977514 System.currentTimeMillis();//1499110977514
+			
+			
+			result = gmh.Query_Date_Range(date_min,date_max);
+			System.out.println(": Side of Result _Date_Range :" + result.size());
+			if(result.size()<400)
+			System.out.println(": Result of _Date_Range is:" + result.toJSONString());
 			
 			
 		} catch (Exception e) {
@@ -64,11 +73,11 @@ public class Geomesa_simple_test {
 	 {
 
 			double value_min=10.0;
-			double value_max=100.0;
+			double value_max=20.0;
 			Random random=new Random(5771);
 			
-			double lat_min=-38.5;
-			double lng_min=65.0;
+			double lat_min=30.0;
+			double lng_min=60.0;
 			double diff_loc=5.0;
 			
 			for (int i = 0; i < count; i++)

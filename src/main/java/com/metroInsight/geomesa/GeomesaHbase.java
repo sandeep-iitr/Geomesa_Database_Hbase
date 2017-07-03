@@ -37,12 +37,44 @@ public class GeomesaHbase {
 	static String simpleFeatureTypeName = "MetroInsight";
 	static SimpleFeatureBuilder featureBuilder=null;
 	
+	public void geomesa_initialize() {
+			
+			try {
+				if (dataStore == null) {
+					Map<String, Serializable> parameters = new HashMap<>();
+					parameters.put("bigtable.table.name", "Geomesa");
+					
+					//DataStoreFinder is from Geotools, returns an indexed datastore if one is available.
+					dataStore = DataStoreFinder.getDataStore(parameters);
+				}
+	
+				assert dataStore != null;
+	
+				// establish specifics concerning the SimpleFeatureType to store
+				String simpleFeatureTypeName = "MetroInsight";
+				SimpleFeatureType simpleFeatureType = createSimpleFeatureType();
+	
+				// write Feature-specific metadata to the destination table in HBase
+				// (first creating the table if it does not already exist); you only
+				// need
+				// to create the FeatureType schema the *first* time you write any
+				// Features
+				// of this type to the table
+				System.out.println("Creating feature-type (schema):  " + simpleFeatureTypeName);
+				dataStore.createSchema(simpleFeatureType);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	
+		}
+
 	static SimpleFeatureType createSimpleFeatureType() throws SchemaException {
 		
 		/*
 		 * We use the DataUtilities class from Geotools to create a FeatureType that will describe the data
 		 * 
 		 */
+		
 		SimpleFeatureType simpleFeatureType = DataUtilities.createType(simpleFeatureTypeName,
 				"point_loc:Point:srid=4326,"+// a Geometry attribute: Point type
 				"data_id:String,"+// a String attribute
@@ -105,83 +137,8 @@ public class GeomesaHbase {
 		featureStore.addFeatures(featureCollection);
 	}
 
-	static Filter createFilter(String geomField, double x0, double y0, double x1, double y1)
-			throws CQLException, IOException {
 
-		// there are many different geometric predicates that might be used;
-		// here, we just use a bounding-box (BBOX) predicate as an example.
-		// this is useful for a rectangular query area
-		String cqlGeometry = "BBOX(" + geomField + ", " + x0 + ", " + y0 + ", " + x1 + ", " + y1 + ")";
-
-		String cql = cqlGeometry;
-		return CQL.toFilter(cql);
-	}
-
-	static JSONArray queryFeatures(DataStore dataStore, String geomField, double x0,
-			double y0, double x1, double y1) throws CQLException, IOException {
-
-		// construct a (E)CQL filter from the search parameters,
-		// and use that as the basis for the query
-		Filter cqlFilter = createFilter(geomField, x0, y0, x1, y1);
-		Query query = new Query(simpleFeatureTypeName, cqlFilter);
-
-		// submit the query, and get back an iterator over matching features
-		FeatureSource featureSource = dataStore.getFeatureSource(simpleFeatureTypeName);
-		FeatureIterator featureItr = featureSource.getFeatures(query).features();
-
-		// FeatureIterator featureItr = featureSource.getFeatures().features();
-
-		JSONArray ja = new JSONArray();
-
-		// loop through all results
-		int n = 0;
-		while (featureItr.hasNext()) {
-			Feature feature = featureItr.next();
-
-			JSONObject Data = new JSONObject();
-			Data.put("data_id", feature.getProperty("data_id").getValue());
-			Data.put("value", feature.getProperty("value").getValue());
-			Data.put("date", feature.getProperty("date").getValue());
-			Data.put("point_loc", feature.getProperty("point_loc").getValue());
-			ja.add(Data);
-
-		}
-		featureItr.close();
-
-		return ja;
-	}
-
-	public void geomesa_initialize() {
-		
-		try {
-			if (dataStore == null) {
-				Map<String, Serializable> parameters = new HashMap<>();
-				parameters.put("bigtable.table.name", "Geomesa");
-				
-				//DataStoreFinder is from Geotools, returns an indexed datastore if one is available.
-				dataStore = DataStoreFinder.getDataStore(parameters);
-			}
-
-			assert dataStore != null;
-
-			// establish specifics concerning the SimpleFeatureType to store
-			String simpleFeatureTypeName = "MetroInsight";
-			SimpleFeatureType simpleFeatureType = createSimpleFeatureType();
-
-			// write Feature-specific metadata to the destination table in HBase
-			// (first creating the table if it does not already exist); you only
-			// need
-			// to create the FeatureType schema the *first* time you write any
-			// Features
-			// of this type to the table
-			System.out.println("Creating feature-type (schema):  " + simpleFeatureTypeName);
-			dataStore.createSchema(simpleFeatureType);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
-	}
-
+	
 	public void geomesa_insertData(String data) {
 		// find out where -- in HBase -- the user wants to store data
 
@@ -217,25 +174,43 @@ public class GeomesaHbase {
 
 	}// end function
 
-	public JSONArray Query() {
-		try {
+	static JSONArray queryFeatures_Box_Lat_Lng(DataStore dataStore, String geomField, double x0,
+			double y0, double x1, double y1) throws CQLException, IOException {
 
-			if (dataStore == null) {
-				geomesa_initialize();
-			}
+		// construct a (E)CQL filter from the search parameters,
+		// and use that as the basis for the query
+		String cqlGeometry = "BBOX(" + geomField + ", " + x0 + ", " + y0 + ", " + x1 + ", " + y1 + ")";
+		Filter cqlFilter = CQL.toFilter(cqlGeometry);
 		
+		Query query = new Query(simpleFeatureTypeName, cqlFilter);
 
-			// query a few Features from this table
-			System.out.println("Submitting query");
-			JSONArray result = queryFeatures(dataStore, "point_loc", -30, 60, -40, 70);
+		// submit the query, and get back an iterator over matching features
+		FeatureSource featureSource = dataStore.getFeatureSource(simpleFeatureTypeName);
+		FeatureIterator featureItr = featureSource.getFeatures(query).features();
 
-			return result;
-		} catch (Exception e) {
-			e.printStackTrace();
+
+		JSONArray ja = new JSONArray();
+
+		// loop through all results
+		int n = 0;
+		while (featureItr.hasNext()) {
+			Feature feature = featureItr.next();
+
+			JSONObject Data = new JSONObject();
+			Data.put("data_id", feature.getProperty("data_id").getValue());
+			Data.put("value", feature.getProperty("value").getValue());
+			Data.put("date", feature.getProperty("date").getValue());
+			Data.put("point_loc", feature.getProperty("point_loc").getValue());
+			ja.add(Data);
+			
+			
 		}
-		return null;
+		featureItr.close();
 
+		return ja;
 	}
+
+	
 
 	
 	public JSONArray Query_Box_Lat_Lng(double lat_min, double lat_max, double lng_min, double lng_max) {
@@ -248,7 +223,71 @@ public class GeomesaHbase {
 
 			// query a few Features from this table
 			System.out.println("Submitting query");
-			JSONArray result = queryFeatures(dataStore, "point_loc", lat_min, lng_min, lat_max, lng_max);
+			JSONArray result = queryFeatures_Box_Lat_Lng(dataStore, "point_loc", lat_min, lng_min, lat_max, lng_max);
+
+			return result;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+
+	}
+	
+
+	static JSONArray queryFeatures_Date_Range(DataStore dataStore, String dateField,long date_min2,long date_max2) throws CQLException, IOException {
+
+		// construct a (E)CQL filter from the search parameters,
+		// and use that as the basis for the query
+		DateTime date_min = new DateTime(date_min2);
+		DateTime date_max = new DateTime(date_max2);
+		
+		String cqlDates = "( " + dateField + " DURING " + date_min+" / " + date_max+")";
+		
+		
+		System.out.println("cqlDate: "+cqlDates);
+		
+		Filter cqlFilter = CQL.toFilter(cqlDates);
+		
+		
+		Query query = new Query(simpleFeatureTypeName, cqlFilter);
+
+		// submit the query, and get back an iterator over matching features
+		FeatureSource featureSource = dataStore.getFeatureSource(simpleFeatureTypeName);
+		FeatureIterator featureItr = featureSource.getFeatures(query).features();
+
+
+		JSONArray ja = new JSONArray();
+
+		// loop through all results
+		int n = 0;
+		while (featureItr.hasNext()) {
+			Feature feature = featureItr.next();
+
+			JSONObject Data = new JSONObject();
+			Data.put("data_id", feature.getProperty("data_id").getValue());
+			Data.put("value", feature.getProperty("value").getValue());
+			Data.put("date", feature.getProperty("date").getValue());
+			Data.put("point_loc", feature.getProperty("point_loc").getValue());
+			ja.add(Data);
+			
+			
+		}
+		featureItr.close();
+
+		return ja;
+	}
+	
+	public JSONArray Query_Date_Range(long date_min,long date_max) {
+		try {
+
+			if (dataStore == null) {
+				geomesa_initialize();
+			}
+		
+
+			// query a few Features from this table
+			System.out.println("Submitting Date query");
+			JSONArray result = queryFeatures_Date_Range(dataStore, "date",date_min,date_max);
 
 			return result;
 		} catch (Exception e) {
