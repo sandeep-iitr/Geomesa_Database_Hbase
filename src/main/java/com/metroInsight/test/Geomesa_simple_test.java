@@ -29,7 +29,7 @@ public class Geomesa_simple_test {
 			 initialize();
 			
 			// inserting data points
-			// insert_data(count);
+			 insert_data(count);
 			
 			// querying the data points
 			double lat_min=33.0;
